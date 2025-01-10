@@ -28,7 +28,7 @@ module.exports = (opt = {}) => {
   const DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days
 
   return async (req, res) => {
-    const token = res.cookies[options.cookie];
+    const token = req.cookies[options.cookie];
     let u = null;
     try {
       const d = jwt.verify(token, options.secret);
