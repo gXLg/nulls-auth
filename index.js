@@ -2,40 +2,19 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { BadTable } = require("badb");
+const { optparser } = require("gxlg-utils");
+
+const parser = optparser([
+  { "name": "cookie",   "types": ["token"]                   },
+  { "name": "path",     "types": [""],      "required": true },
+  { "name": "secret",   "types": [""],      "required": true },
+  { "name": "username", "types": [24]                        },
+  { "name": "secure",   "types": [true]                      },
+  { "name": "verify",   "types": [false]                     }
+]);
 
 module.exports = (opt = {}) => {
-  const args = [
-    ["cookie", false, "token"],
-    ["path", true, ""],
-    ["secret", true, ""],
-    ["username", false, 24],
-    ["secure", false, true],
-    ["verify", false, false]
-  ];
-
-  const options = { };
-  for (const [name, required, ...def] of args) {
-    const value = opt[name];
-    let valid = value == null;
-    if (!valid) {
-      for (const d of def) {
-        if (value.constructor == d.constructor) {
-          valid = true;
-          break;
-        }
-      }
-    }
-    if (!valid) {
-      throw new Error(
-        "Argument '" + name + "' has a wrong type! Expected one of: " +
-        [...new Set(def.map(d => d.constructor.name))].join(", ")
-      );
-    }
-    if (required && value == null) {
-      throw new Error("Non-null argument '" + name + "' is required, but was not found");
-    }
-    options[name] = value ?? def[0];
-  }
+  const options = parser(opt);
 
   const db = new BadTable(options.path, {
     "key": "u",
