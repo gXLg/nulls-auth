@@ -45,7 +45,7 @@ module.exports = (opt = {}) => {
       const p = req.body.password;
       const v = req.body.verify;
 
-      const { h, t } = await db[u](x => [x.h, x.t]);
+      const { h, t } = await db[u](x => x);
       if (!h) return false;
       if (!bcrypt.compareSync(p, h)) return false;
       if (options.verify && t) {
