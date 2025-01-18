@@ -43,7 +43,7 @@ module.exports = (opt = {}) => {
     req.login = async () => {
       const u = req.body[options.param];
       const p = req.body.password;
-      const v = req.query.verify;
+      const v = req.body.verify;
 
       const { h, t } = await db[u](x => [x.h, x.t]);
       if (!h) return false;
