@@ -10,7 +10,8 @@ const parser = optparser([
   { "name": "secret",   "types": [""],      "required": true },
   { "name": "username", "types": [24]                        },
   { "name": "secure",   "types": [true]                      },
-  { "name": "verify",   "types": [false]                     }
+  { "name": "verify",   "types": [false]                     },
+  { "name": "param",    "types": ["username"]                }
 ]);
 
 module.exports = (opt = {}) => {
@@ -40,11 +41,12 @@ module.exports = (opt = {}) => {
     req.auth = u;
 
     req.login = async () => {
-      const u = req.body.username;
+      const u = req.body[options.param];
       const p = req.body.password;
       const v = req.query.verify;
 
       const { h, t } = await db[u](x => [x.h, x.t]);
+      if (!h) return false;
       if (!bcrypt.compareSync(p, h)) return false;
       if (options.verify && t) {
         if (v == t) await db[u](x => { x.t = ""; });
@@ -72,7 +74,7 @@ module.exports = (opt = {}) => {
     };
 
     req.register = async () => {
-      const u = req.body.username;
+      const u = req.body[options.param];
       const p = req.body.password;
       const h = bcrypt.hashSync(p);
 
