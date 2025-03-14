@@ -1,6 +1,6 @@
 {
   "name": "nulls-auth",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Simple express middleware for authentification in nulls",
   "main": "index.js",
   "scripts": {
