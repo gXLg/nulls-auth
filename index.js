@@ -27,7 +27,7 @@ module.exports = (opt = {}) => {
     "values": [
       { "name": "u", "maxLength": options.username },
       { "name": "h", "maxLength": 60 },
-      ...(options.otp    ? [{ "name": "o", "maxLength": 16 }] : []),
+      ...(options.otp    ? [{ "name": "o", "maxLength": 26 }] : []),
       ...(options.verify ? [{ "name": "t", "maxLength": 20 }] : [])
     ]
   });
