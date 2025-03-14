@@ -15,7 +15,7 @@ const parser = optparser([
   { "name": "username", "types": [24]                        },
   { "name": "secure",   "types": [true]                      },
   { "name": "verify",   "types": [false]                     },
-  { "name": "otp",      "types": [null, ""]                  },
+  { "name": "otp",      "types": [false, ""]                 },
   { "name": "param",    "types": ["username"]                }
 ]);
 
