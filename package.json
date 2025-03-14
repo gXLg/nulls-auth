@@ -26,6 +26,8 @@
     "badb": "^1.2.2",
     "bcryptjs": "^2.4.3",
     "gxlg-utils": "^1.4.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "otplib": "^12.0.1",
+    "qrcode": "^1.5.4"
   }
 }

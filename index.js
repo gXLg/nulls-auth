@@ -3,6 +3,10 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { BadTable } = require("badb");
 const { optparser } = require("gxlg-utils");
+const { authenticator } = require("otplib");
+const qrcode = require("qrcode");
+
+authenticator.options = { "window": 1 };
 
 const parser = optparser([
   { "name": "cookie",   "types": ["token"]                   },
@@ -11,6 +15,7 @@ const parser = optparser([
   { "name": "username", "types": [24]                        },
   { "name": "secure",   "types": [true]                      },
   { "name": "verify",   "types": [false]                     },
+  { "name": "otp",      "types": [null, ""]                  },
   { "name": "param",    "types": ["username"]                }
 ]);
 
@@ -22,6 +27,7 @@ module.exports = (opt = {}) => {
     "values": [
       { "name": "u", "maxLength": options.username },
       { "name": "h", "maxLength": 60 },
+      ...(options.otp    ? [{ "name": "o", "maxLength": 16 }] : []),
       ...(options.verify ? [{ "name": "t", "maxLength": 20 }] : [])
     ]
   });
@@ -44,14 +50,21 @@ module.exports = (opt = {}) => {
       const u = req.body[options.param];
       const p = req.body.password;
       const v = req.body.verify;
+      const otp = req.body.otp;
 
-      const { h, t } = await db[u](x => x);
-      if (!h) return false;
-      if (!bcrypt.compareSync(p, h)) return false;
-      if (options.verify && t) {
-        if (v == t) await db[u](x => { x.t = ""; });
-        else return false;
-      }
+      const success = await db[u](x => {
+        if (!h) return false;
+        if (!bcrypt.compareSync(p, x.h)) return false;
+        if (options.verify && x.t) {
+          if (v == x.t) { x.t = ""; }
+          else return false;
+        }
+        if (options.otp) {
+          if (!authenticator.check(otp, x.o)) return false;
+        }
+        return true;
+      });
+      if (!success) return false;
 
       const token = jwt.sign({ u }, options.secret, { "expiresIn": DURATION.toString() });
       const opt = {
@@ -78,15 +91,23 @@ module.exports = (opt = {}) => {
       const p = req.body.password;
       const h = bcrypt.hashSync(p);
 
-      return await db[u]((x, c) => {
-        if (c.exists() && !x.t) return false;
+      return await db[u](async (x, c) => {
+        if (c.exists() && !x.t) return null;
         x.h = h;
+        const opt = {};
         if (options.verify) {
           const v = crypto.randomBytes(15).toString("base64url");
           x.t = v;
-          return v;
+          opt.verify = v;
         }
-        return true;
+        if (options.otp) {
+          const s = authenticator.generateSecret(16);
+          x.o = s;
+          opt.secret = s;
+          const uri = authenticator.keyuri(u, options.otp, s);
+          opt.qrcode = await qrcode.toDataURL(uri);
+        }
+        return opt;
       });
     };
   };
