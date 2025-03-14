@@ -53,7 +53,7 @@ module.exports = (opt = {}) => {
       const otp = req.body.otp;
 
       const success = await db[u](x => {
-        if (!h) return false;
+        if (!x.h) return false;
         if (!bcrypt.compareSync(p, x.h)) return false;
         if (options.verify && x.t) {
           if (v == x.t) { x.t = ""; }
