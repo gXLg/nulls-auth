@@ -16,11 +16,23 @@ const parser = optparser([
   { "name": "secure",   "types": [true]                      },
   { "name": "verify",   "types": [false]                     },
   { "name": "otp",      "types": [false, ""]                 },
+  { "name": "reset",    "types": [false]                     },
   { "name": "param",    "types": ["username"]                }
 ]);
 
+// states:
+// verify token | reset flag | meaning               | can switch to
+// absent         absent       normal account (1)      4
+// exists         absent       new account (2)         1, 2
+// absent         exists       await new register (3)  2
+// exists         exists       reset requested (4)     1, 3
+
 module.exports = (opt = {}) => {
   const options = parser(opt);
+
+  if (options.reset && !options.verify) {
+    throw new Error("Option 'reset' can not be selected without option 'verify'");
+  }
 
   const db = new BadTable(options.path, {
     "key": "u",
@@ -28,6 +40,7 @@ module.exports = (opt = {}) => {
       { "name": "u", "maxLength": options.username },
       { "name": "h", "maxLength": 60 },
       ...(options.otp    ? [{ "name": "o", "maxLength": 26 }] : []),
+      ...(options.reset  ? [{ "name": "r", "type": "uint8" }] : []),
       ...(options.verify ? [{ "name": "t", "maxLength": 20 }] : [])
     ]
   });
@@ -51,17 +64,30 @@ module.exports = (opt = {}) => {
       const p = req.body.password;
       const v = req.body.verify;
       const otp = req.body.otp;
+      const success = await db[u]((x, c) => {
+        if (c.exists()) {
+          // state check
+          if (x.t && x.r) {
+            // reset requested, can login, token irrelevant
+          } else if (x.t && !x.r) {
+            // new account, can login only with token
+            if (v != x.t) return false;
+          } else if (!x.t && x.r) {
+            // reset confirmed, can't login
+            return false;
+          } else {
+            // normal account, can login, token irrelevant
+          }
+        } else return false; // can't login
 
-      const success = await db[u](x => {
-        if (!x.h) return false;
+        // login process
         if (!bcrypt.compareSync(p, x.h)) return false;
-        if (options.verify && x.t) {
-          if (v == x.t) { x.t = ""; }
-          else return false;
-        }
+        if (options.verify) { x.t = ""; }
         if (options.otp) {
           if (!authenticator.check(otp, x.o)) return false;
         }
+        if (options.reset) { x.r = 0; }
+
         return true;
       });
       if (!success) return false;
@@ -90,11 +116,25 @@ module.exports = (opt = {}) => {
       const u = req.body[options.param];
       const p = req.body.password;
       const h = bcrypt.hashSync(p);
-
       return await db[u](async (x, c) => {
-        if (c.exists() && !x.t) return null;
+        if (c.exists()) {
+          // state check
+          if (x.t && x.r) {
+            // reset requested, can't register
+            return false;
+          } else if (x.t && !x.r) {
+            // new account, can register again
+          } else if (!x.t && x.r) {
+            // reset confirmed, can register again
+          } else {
+            // normal account, can't register again
+            return false;
+          }
+        }
+
+        const opt = { };
+        // register process
         x.h = h;
-        const opt = {};
         if (options.verify) {
           const v = crypto.randomBytes(15).toString("base64url");
           x.t = v;
@@ -107,7 +147,64 @@ module.exports = (opt = {}) => {
           const uri = authenticator.keyuri(u, options.otp, s);
           opt.qrcode = await qrcode.toDataURL(uri);
         }
+        if (options.reset) { x.r = 0; }
         return opt;
+      });
+    };
+
+    req.requestReset = async () => {
+      const u = req.body[options.param];
+      return await db[u](async (x, c) => {
+        if (c.exists()) {
+          // state check
+          if (x.t && x.r) {
+            // reset requested, can request again
+          } else if (x.t && !x.r) {
+            // new account, can't request reset
+            return false;
+          } else if (!x.t && x.r) {
+            // reset confirmed, can't request reset
+            return false;
+          } else {
+            // normal account, can request reset
+          }
+        } else return false;
+
+        const opt = { };
+        // request reset process
+        const v = crypto.randomBytes(15).toString("base64url");
+        x.t = v;
+        opt.verify = v;
+        x.r = 1;
+        return opt;
+      });
+    };
+
+    req.confirmReset = async () => {
+      const u = req.body[options.param];
+      const v = req.body.verify;
+      return await db[u](async (x, c) => {
+        if (c.exists()) {
+          // state check
+          if (x.t && x.r) {
+            // reset requested, can start reset with valid token
+            if (v != x.t) return false;
+          } else if (x.t && !x.r) {
+            // new account, can't start reset
+            return false;
+          } else if (!x.t && x.r) {
+            // reset confirmed, can't start reset again
+            return false;
+          } else {
+            // normal account, can't start reset
+            return false;
+          }
+        } else return false;
+
+        // init reset process
+        x.t = "";
+        x.r = 1;
+        return true;
       });
     };
   };
