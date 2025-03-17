@@ -47,7 +47,7 @@ module.exports = (opt = {}) => {
 
   const DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-  return async (req, res) => {
+  const plugin = async (req, res) => {
     const token = req.cookies[options.cookie];
     let u = null;
     try {
@@ -206,6 +206,14 @@ module.exports = (opt = {}) => {
         x.r = 1;
         return true;
       });
+    };
+  };
+
+  return options => {
+    const prev = options.hook;
+    options.hook = async (req, res) => {
+      await plugin(req, res);
+      await prev(req, res);
     };
   };
 };
