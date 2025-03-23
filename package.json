@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/gXLg/nulls-auth#readme",
   "dependencies": {
-    "badb": "^1.2.2",
+    "badb": "^1.3.0",
     "bcryptjs": "^2.4.3",
     "gxlg-utils": "^1.4.0",
     "jsonwebtoken": "^9.0.2",
