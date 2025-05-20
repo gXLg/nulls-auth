@@ -167,6 +167,10 @@ module.exports = (opt = {}) => {
   const plugin = async (req, res) => {
     verifyJWT(req, res);
 
+    req.hashed = () => {
+      return req.auth ? hmac(req.auth) : null;
+    }
+
     req.login = async () => {
       const u = hmac(req.body[options.username]);
       const p = req.body.password;
@@ -269,7 +273,7 @@ module.exports = (opt = {}) => {
         throw new Error("'reset' was not enabled in the options");
       }
       const u = hmac(req.body[options.username]);
-      return await db[u](async (x, c) => {
+      return await db[u]((x, c) => {
         if (c.exists()) {
           // state check
           if (x.t && x.r) {
@@ -301,7 +305,7 @@ module.exports = (opt = {}) => {
       }
       const u = hmac(req.body[options.username]);
       const v = req.body.verify;
-      return await db[u](async (x, c) => {
+      return await db[u]((x, c) => {
         if (c.exists()) {
           // state check
           if (x.t && x.r) {
@@ -375,7 +379,7 @@ module.exports = (opt = {}) => {
       }
       if (req.auth == null) return false;
       const u = hmac(req.auth);
-      return await db[u](async (x, c) => {
+      return await db[u]((x, c) => {
         x.o = old;
         return true;
       });
@@ -386,7 +390,7 @@ module.exports = (opt = {}) => {
         throw new Error("'whitelist' was not enabled in the options");
       }
       const u = hmac(req.body[options.username]);
-      return await db[u](async (x, c) => {
+      return await db[u]((x, c) => {
         if (c.exists() && x.h != "") return false;
         x.h = "";
         const v = crypto.randomBytes(15).toString("base64url");
@@ -405,12 +409,30 @@ module.exports = (opt = {}) => {
 
     req.revertRegister = async old => {
       const u = hmac(req.body[options.username]);
-      return await db[u](async (x, c) => {
+      return await db[u]((x, c) => {
         x.t = old.t;
         x.h = old.h;
         x.r = old.r;
       });
     };
+
+    req.migrate = async () => {
+      const u = hmac(req.body[options.username]);
+      const n = hmac(req.body["new_" + options.username]);
+      if (await db[n]((x, c) => c.exists())) return false;
+
+      const o = await db[u]((x, c) => {
+        c.remove();
+        return c.exists() ? x : null;
+      });
+      if (o == null) return false;
+      await db[n](x => {
+        for (const name in o) {
+          x[name] = o[name];
+        }
+      });
+      return true;
+    }
 
   };
 
