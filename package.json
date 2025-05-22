@@ -1,6 +1,6 @@
 {
   "name": "nulls-auth",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Simple nulls plugin for authentification",
   "main": "index.js",
   "scripts": {
