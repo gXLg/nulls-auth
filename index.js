@@ -167,9 +167,7 @@ module.exports = (opt = {}) => {
   const plugin = async (req, res) => {
     verifyJWT(req, res);
 
-    req.hashed = () => {
-      return req.auth ? hmac(req.auth) : null;
-    }
+    req.hashed = user => hmac(user);
 
     req.login = async () => {
       const u = hmac(req.body[options.username]);
