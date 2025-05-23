@@ -133,6 +133,8 @@ module.exports = (opt = {}) => {
       let dec = decipher.update(u, "base64url", "utf8");
       dec += decipher.final("utf8");
 
+      if (await db[dec]((_, c) => !c.exists())) return false;
+
       if (username == null || dec == username) {
         if (update != null) setJWT(res, update);
         req.auth = dec;
@@ -424,12 +426,13 @@ module.exports = (opt = {}) => {
         return c.exists() ? x : null;
       });
       if (o == null) return false;
-      await db[n](x => {
+      return await db[n]((x, c) => {
+        if (c.exists()) return false;
         for (const name in o) {
           x[name] = o[name];
         }
+        return true;
       });
-      return true;
     }
 
   };
