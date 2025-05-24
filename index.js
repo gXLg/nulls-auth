@@ -83,12 +83,12 @@ module.exports = (opt = {}) => {
     res.cookie(options.cookie, token, opt);
   }
 
-  function createJWT(req, res) {
+  async function createJWT(req, res) {
     const username = req.body[options.username];
 
     // if the login happens with an invalid fingerprint,
     // but valid auth, then just update fingerprint
-    if (verifyJWT(req, res, username)) return;
+    if (await verifyJWT(req, res, username)) return;
 
     const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv("aes-256-gcm", aesKey, iv);
@@ -107,7 +107,7 @@ module.exports = (opt = {}) => {
     req.auth = username;
   }
 
-  function verifyJWT(req, res, username) {
+  async function verifyJWT(req, res, username) {
     const t = req.cookies[options.cookie];
     if (t == null) return false;
     try {
@@ -167,7 +167,7 @@ module.exports = (opt = {}) => {
   }
 
   const plugin = async (req, res) => {
-    verifyJWT(req, res);
+    await verifyJWT(req, res);
 
     req.hashed = user => hmac(user);
 
@@ -203,7 +203,7 @@ module.exports = (opt = {}) => {
         return true;
       });
       if (!success) return false;
-      createJWT(req, res);
+      await createJWT(req, res);
       return true;
     };
 
