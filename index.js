@@ -418,7 +418,7 @@ module.exports = (opt = {}) => {
 
     req.migrate = async () => {
       const u = hmac(req.body[options.username]);
-      const n = hmac(req.body["new_" + options.username]);
+      const n = hmac(req.body["new-" + options.username]);
       if (await db[n]((x, c) => c.exists())) return false;
 
       const o = await db[u]((x, c) => {
