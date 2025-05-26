@@ -133,7 +133,25 @@ module.exports = (opt = {}) => {
       let dec = decipher.update(u, "base64url", "utf8");
       dec += decipher.final("utf8");
 
-      if (await db[hmac(dec)]((_, c) => !c.exists())) return false;
+      if (await db[hmac(dec)]((x, c) => {
+        if (c.exists()) {
+          // state check
+          if (x.t && x.r) {
+            // reset requested, can still login
+            return false;
+          } else if (x.t && !x.r) {
+            // new account, can login only with valid token
+            return true;
+          } else if (!x.t && x.r) {
+            // reset confirmed, can't login
+            return true;
+          } else {
+            // normal account, can login
+            return false;
+          }
+        } else return true; // doesn't exist, can't login
+
+      })) return false;
 
       if (username == null || dec == username) {
         if (update != null) setJWT(res, update);
