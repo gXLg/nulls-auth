@@ -20,7 +20,6 @@ const parser = optparser([
   { "name": "jwt",         "types": ["", []],        "required": true },
   { "name": "aes",         "types": ["", []],        "required": true },
   { "name": "hmac",        "types": ["", []],        "required": true },
-  { "name": "cloudflared", "types": [false]                           },
   { "name": "admin",       "types": [false, ""]                       },
   { "name": "adminCreate", "types": [false, () => {}, async () => {}] }
 ]);
@@ -95,7 +94,7 @@ module.exports = (opt = {}) => {
     let enc = cipher.update(username, "utf8", "base64url");
     enc += cipher.final("base64url");
     const tag = cipher.getAuthTag().toString("base64url"); // integrity
-    const ip = hmac(options.cloudflared ? req.headers["cf-connecting-ip"] : req.ip);
+    const ip = hmac(req.ip);
     const ts = Date.now();
     const p = {
       // user data encryption
