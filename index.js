@@ -114,7 +114,7 @@ module.exports = (opt = {}) => {
 
       // fingerprint verification
       let update = null;
-      const ip = hmac(options.cloudflared ? req.headers["cf-connecting-ip"] : req.ip);
+      const ip = hmac(req.ip);
       if (!fp.includes(ip)) {
         const nts = Date.now();
         if (nts - ts > FPOLD) return false;
