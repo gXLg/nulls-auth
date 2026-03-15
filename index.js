@@ -390,6 +390,15 @@ module.exports = (opt = {}) => {
     // warning: following endpoints should be called
     // only by admin or by internal error handling
 
+    req.deleteUser = async () => {
+      const u = hmac(req.body[options.username]);
+      return await db[u]((x, c) => {
+        if (!c.exists()) return false;
+        c.remove();
+        return true;
+      });
+    }
+
     req.revertOtp = async old => {
       if (!options.otp) {
         throw new Error("'otp' was not enabled in the options");
